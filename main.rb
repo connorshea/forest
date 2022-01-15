@@ -9,12 +9,18 @@ SIZE = 10
 forest = Forest.new(size: SIZE)
 
 loop do
-  puts forest.pretty_inspect if ENV['DEBUG']
+  puts forest.pretty_inspect if ENV['DEBUG'] || ENV['DISPLAY_FOREST']
   puts 'Tick!' if ENV['DEBUG']
   continue = forest.tick!
   unless continue
-    puts 'Ending simulation.'
+    if forest.month >= 4800
+      puts 'COMPLETE: We have simulated 400 years.'
+    else
+      puts 'COMPLETE: There are no trees left.'
+    end
     break
   end
-  sleep 1
+  # Commented out since we want to see the full script run and there's no
+  # reason to limit the speed anymore.
+  # sleep 0.1
 end
