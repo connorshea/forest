@@ -43,7 +43,7 @@ class Forest
       newly_harvested_lumber: 0
     }
 
-    populate_grid!
+    populate_grid_initially!
   end
 
   # Handle actions for the Slottables on each tick. We can't do this from the
@@ -73,19 +73,7 @@ class Forest
       end
     end
 
-    # Monthly outputs.
-    puts "Month [#{formatted_month_number}]: [#{@tick_stats[:new_saplings_spawned]}] new saplings created." unless @tick_stats[:new_saplings_spawned].zero?
-    puts "Month [#{formatted_month_number}]: [#{@tick_stats[:new_elder_trees_spawned]}] trees became elder trees." unless @tick_stats[:new_elder_trees_spawned].zero?
-    puts "Month [#{formatted_month_number}]: [#{@tick_stats[:newly_mawed_lumberjacks]}] Lumberjacks were Maw'd by bears." unless @tick_stats[:newly_mawed_lumberjacks].zero?
-    puts "Month [#{formatted_month_number}]: [#{@tick_stats[:newly_harvested_lumber]}] pieces of lumber harvested by Lumberjacks." unless @tick_stats[:newly_harvested_lumber].zero?
-
-    @mawings += @tick_stats[:newly_mawed_lumberjacks]
-    @lumber += @tick_stats[:newly_harvested_lumber]
-
-    perform_annual_actions if @month % 12 == 0
-    @month += 1
-
-    reset_actions_for_current_tick!
+    perform_monthly_actions
 
     # If there are no trees left, end the simulation.
     return false if count_any_tree.zero?
@@ -96,8 +84,9 @@ class Forest
   end
 
   # Populates the grid with bears and trees and lumberjacks.
+  #
   # @return [void]
-  def populate_grid!
+  def populate_grid_initially!
     bears_to_spawn = (Bear::SPAWN_RATE * total_grid_size).round
     puts "Spawning #{bears_to_spawn} Bears..." if ENV['DEBUG']
     bears_to_spawn.times do
@@ -324,66 +313,6 @@ class Forest
     bear.tick!
   end
 
-  def perform_annual_actions
-    puts "Year [#{formatted_year_number}]: has #{count_trees} Trees, #{count_saplings} Saplings, #{count_elder_trees} Elder Trees, #{count_lumberjacks} Lumberjacks, and #{count_bears} Bears."
-
-    # Spawn a new bear if there were no mawings this year.
-    # Otherwise, pick a random bear from the grid and then have the Zoo
-    # catch it.
-    if @mawings.zero?
-      populate_an_empty_grid_space(Bear.new)
-      puts "Year [#{formatted_year_number}]: 1 new Bear added."
-    else
-      bear_coords = []
-      @grid.each_with_index do |row, y|
-        row.each_with_index do |slottable, x|
-          next if slottable.nil?
-          bear_coords << [x, y] if slottable.bear?
-        end
-      end
-      empty_slot!(*bear_coords.sample)
-
-      puts "Year [#{formatted_year_number}]: 1 Bear captured by Zoo."
-    end
-
-    # Fire a lumberjack if the lumberjacks don't harvest more lumber than
-    # there are lumberjacks. Otherwise, hire new lumberjacks based on the
-    # amount of lumber harvested this year.
-    if @lumber < count_lumberjacks
-      lumberjack_coords = []
-      @grid.each_with_index do |row, y|
-        row.each_with_index do |slottable, x|
-          next if slottable.nil?
-          lumberjack_coords << [x, y] if slottable.lumberjack?
-        end
-      end
-
-      # Fire a random lumberjack unless there aren't any to fire.
-      # This _probably_ shouldn't ever happen because if the last lumberjack
-      # is mawed he'll be replaced immediately.
-      empty_slot!(*lumberjack_coords.sample) unless lumberjack_coords.size.zero?
-
-      # If we reach zero lumberjacks because we fired the last one, spawn a
-      # new one somewhere.
-      if count_lumberjacks.zero?
-        populate_an_empty_grid_space(Lumberjack.new)
-      end
-
-      # We don't really care that this is inaccurate in some cases (e.g. if the last lumberjack is fired).
-      puts "Year [#{formatted_year_number}]: #{@lumber} pieces of lumber harvested, 1 Lumberjack fired."
-    else
-      lumberjacks_hired = (@lumber / count_lumberjacks).floor
-      lumberjacks_hired.times do
-        populate_an_empty_grid_space(Lumberjack.new)
-      end
-      puts "Year [#{formatted_year_number}]: #{@lumber} pieces of lumber harvested, #{lumberjacks_hired} new Lumberjack hired."
-    end
-
-    # Each year, reset mawings and lumber to zero.
-    @mawings = 0
-    @lumber = 0
-  end
-
   # Empty a slot on the grid.
   #
   # @param x [Integer]
@@ -499,6 +428,90 @@ class Forest
     end
   end
 
+  private
+
+  # Perform actions that need to be done every month.
+  #
+  # @return [void]
+  def perform_monthly_actions
+    # Monthly outputs.
+    puts "Month [#{formatted_month_number}]: [#{@tick_stats[:new_saplings_spawned]}] new saplings created." unless @tick_stats[:new_saplings_spawned].zero?
+    puts "Month [#{formatted_month_number}]: [#{@tick_stats[:new_elder_trees_spawned]}] trees became elder trees." unless @tick_stats[:new_elder_trees_spawned].zero?
+    puts "Month [#{formatted_month_number}]: [#{@tick_stats[:newly_mawed_lumberjacks]}] Lumberjacks were Maw'd by bears." unless @tick_stats[:newly_mawed_lumberjacks].zero?
+    puts "Month [#{formatted_month_number}]: [#{@tick_stats[:newly_harvested_lumber]}] pieces of lumber harvested by Lumberjacks." unless @tick_stats[:newly_harvested_lumber].zero?
+
+    @mawings += @tick_stats[:newly_mawed_lumberjacks]
+    @lumber += @tick_stats[:newly_harvested_lumber]
+
+    perform_annual_actions if @month % 12 == 0
+    @month += 1
+
+    reset_actions_for_current_tick!
+  end
+
+  # Perform actions that need to be done every 12 months.
+  #
+  # @return [void]
+  def perform_annual_actions
+    puts "Year [#{formatted_year_number}]: has #{count_trees} Trees, #{count_saplings} Saplings, #{count_elder_trees} Elder Trees, #{count_lumberjacks} Lumberjacks, and #{count_bears} Bears."
+
+    # Spawn a new bear if there were no mawings this year.
+    # Otherwise, pick a random bear from the grid and then have the Zoo
+    # catch it.
+    if @mawings.zero?
+      populate_an_empty_grid_space(Bear.new)
+      puts "Year [#{formatted_year_number}]: 1 new Bear added."
+    else
+      bear_coords = []
+      @grid.each_with_index do |row, y|
+        row.each_with_index do |slottable, x|
+          next if slottable.nil?
+          bear_coords << [x, y] if slottable.bear?
+        end
+      end
+      empty_slot!(*bear_coords.sample)
+
+      puts "Year [#{formatted_year_number}]: 1 Bear captured by Zoo."
+    end
+
+    # Fire a lumberjack if the lumberjacks don't harvest more lumber than
+    # there are lumberjacks. Otherwise, hire new lumberjacks based on the
+    # amount of lumber harvested this year.
+    if @lumber < count_lumberjacks
+      lumberjack_coords = []
+      @grid.each_with_index do |row, y|
+        row.each_with_index do |slottable, x|
+          next if slottable.nil?
+          lumberjack_coords << [x, y] if slottable.lumberjack?
+        end
+      end
+
+      # Fire a random lumberjack unless there aren't any to fire.
+      # This _probably_ shouldn't ever happen because if the last lumberjack
+      # is mawed he'll be replaced immediately.
+      empty_slot!(*lumberjack_coords.sample) unless lumberjack_coords.size.zero?
+
+      # If we reach zero lumberjacks because we fired the last one, spawn a
+      # new one somewhere.
+      if count_lumberjacks.zero?
+        populate_an_empty_grid_space(Lumberjack.new)
+      end
+
+      # We don't really care that this is inaccurate in some cases (e.g. if the last lumberjack is fired).
+      puts "Year [#{formatted_year_number}]: #{@lumber} pieces of lumber harvested, 1 Lumberjack fired."
+    else
+      lumberjacks_hired = (@lumber / count_lumberjacks).floor
+      lumberjacks_hired.times do
+        populate_an_empty_grid_space(Lumberjack.new)
+      end
+      puts "Year [#{formatted_year_number}]: #{@lumber} pieces of lumber harvested, #{lumberjacks_hired} new Lumberjack hired."
+    end
+
+    # Each year, reset mawings and lumber to zero.
+    @mawings = 0
+    @lumber = 0
+  end
+
   # Iterate through the grid and reset all lumberjacks and bears so they're no
   # longer marked as having acted.
   #
@@ -514,8 +527,6 @@ class Forest
       end
     end
   end
-
-  private
 
   # Converts the months into a value with leading 0s (if necessary).
   #
