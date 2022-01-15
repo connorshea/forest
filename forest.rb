@@ -85,9 +85,13 @@ class Forest
           # to save money and 1 random lumberjack is removed from the forest.
           # However you will never reduce your Lumberjack labor force below 0.
 
+          # Skip this Lumberjack if it's already acted on this tick.
+          next if slottable.acted_on_current_tick?
+
           # Track movements, Lumberjack can only have 3 at most.
           movements = 0
-          # Copy the current x and y so we can update it to match the 
+          # Copy the current x and y so we can update it to match the location
+          # of the lumberjack after each movement.
           curr_x = x
           curr_y = y
 
@@ -151,6 +155,16 @@ class Forest
 
           slottable.tick!
         elsif slottable.bear?
+          # Skip this Bear if it's already acted on this tick.
+          next if slottable.acted_on_current_tick?
+
+          # Track movements, Bear can only have 5 at most.
+          movements = 0
+          # Copy the current x and y so we can update it to match the location
+          # of the bear after each movement.
+          curr_x = x
+          curr_y = y
+
           slottable.tick!
         end
       end
@@ -166,6 +180,8 @@ class Forest
       # puts "Year [#{(@month / 12).to_s.rjust(3, '0')}]: #{num_bears_added} Bears added."
     end
     @month += 1
+
+    reset_actions_for_current_tick!
 
     # If there are no trees left, end the simulation.
     return false if count_any_tree.zero?
@@ -211,6 +227,7 @@ class Forest
   end
 
   # Empty a slot on the grid.
+  #
   # @param x [Integer]
   # @param y [Integer]
   # @param [void]
@@ -218,15 +235,17 @@ class Forest
     raise StandardError, "This space (#{[x, y]}) is already empty!" if @grid[y][x].nil?
 
     puts "Emptying #{[x, y]}." if ENV['DEBUG']
-
     @grid[y][x] = nil
   end
 
+  # Populate a slot on the grid with a slottable.
+  #
   # @param x [Integer]
   # @param y [Integer]
-  # @param slottable [Slottable, nil] 
+  # @param slottable [Slottable] 
   # @param [void]
   def populate(x, y, slottable)
+    raise StandardError, "Cannot populate a space with nil, use Forest#empty_slot! instead!" if slottable.nil?
     raise StandardError, "This space (#{[x, y]}) is already populated!" unless @grid[y][x].nil?
 
     puts "Populating #{[x, y]} with #{slottable.class}." if ENV['DEBUG']
@@ -252,18 +271,21 @@ class Forest
   end
 
   # Count the number of elder trees.
+  #
   # @return [Integer]
   def count_elder_trees
     @grid.flatten.compact.filter(&:elder_tree?).size
   end
 
   # Count the number of lumberjacks.
+  #
   # @return [Integer]
   def count_lumberjacks
     @grid.flatten.compact.filter(&:lumberjack?).size
   end
 
   # Count the number of bears.
+  #
   # @return [Integer]
   def count_bears
     @grid.flatten.compact.filter(&:bear?).size
@@ -315,6 +337,22 @@ class Forest
         coords: [x, y],
         content: @grid[y][x].dup
       }
+    end
+  end
+
+  # Iterate through the grid and reset all lumberjacks and bears so they're no
+  # longer marked as having acted.
+  #
+  # @return [void]
+  def reset_actions_for_current_tick!
+    @grid.each do |row|
+      row.each do |slottable|
+        next if slottable.nil?
+
+        if slottable.lumberjack? || slottable.bear?
+          slottable.acted_on_current_tick = false
+        end
+      end
     end
   end
 end
