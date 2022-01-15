@@ -106,19 +106,25 @@ class Forest
     end
   end
 
-  # Loops until it finds an empty grid space to place the slottable.
-  # TODO: Optimize this by filtering down to the coordinates of empty slots and then picking a random value there.
+  # Randomly select an empty grid space to place the slottable.
   #
   # @param slottable [Slottable]
   # @return [void]
   def populate_an_empty_grid_space(slottable)
-    loop do
-      rand_num = rand(total_grid_size)
-      if @grid[rand_num % size][rand_num / size].nil?
-        populate(rand_num / size, rand_num % size, slottable)
-        break
+    nil_coords = []
+
+    @grid.each_with_index do |row, y|
+      row.each_with_index do |slottable, x|
+        nil_coords << [x, y] if slottable.nil?
       end
     end
+
+    if nil_coords.empty?
+      puts 'ERROR: No empty grid slots.'
+      return
+    end
+
+    populate(*nil_coords.sample, slottable)
   end
 
   # Perform a tick for a tree.
