@@ -13,7 +13,7 @@ loop do
   puts 'Tick!' if ENV['DEBUG']
   continue = forest.tick!
   unless continue
-    puts "Ending simulation."
+    puts 'Ending simulation.'
     break
   end
   sleep 1

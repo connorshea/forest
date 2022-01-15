@@ -49,7 +49,15 @@ class Forest
               populate(empty_adjacent_space[:coords][0], empty_adjacent_space[:coords][1], Tree.new(type: :sapling, age: 0))
             end
           end
-        else
+        elsif slot.is_a?(Lumberjack)
+          # Track movements, Lumberjack can only have 3 at most.
+          movements = 0
+          until movements >= 3
+            movements += 1
+            # TODO
+          end
+          slot&.tick!
+        elsif slot.is_a?(Bear)
           slot&.tick!
         end
       end
@@ -148,39 +156,31 @@ class Forest
   end
 
   # Given an x and y coordinate, get the contents of the adjacent spaces.
-  # TODO: There's definitely a better way to do this.
   #
   # @param x [Integer] The x coordinate.
   # @param y [Integer] The y coordinate.
   # @return [Array<Hash>] Array of hashes with coordinates and contents.
   def get_adjacent_spaces(x, y)
-    adjacent_spaces = []
+    adjacent_spaces = [
+      [x - 1, y - 1],
+      [x - 1, y],
+      [x - 1, y + 1],
+      [x, y - 1],
+      [x, y + 1],
+      [x + 1, y - 1],
+      [x + 1, y],
+      [x + 1, y + 1]
+    ]
 
-    if x < size - 1 && y < size - 1
-      adjacent_spaces << {
-        coords: [x + 1, y + 1],
-        content: @grid[x + 1][y + 1]
-      }
-    end
-    if x < size - 1 && !y.zero?
-      adjacent_spaces << {
-        coords: [x + 1, y - 1],
-        content: @grid[x + 1][y - 1]
-      }
-    end
-    if !x.zero? && y < size - 1
-      adjacent_spaces << {
-        coords: [x - 1, y + 1],
-        content: @grid[x - 1][y + 1]
-      }
-    end
-    if !x.zero? && !y.zero?
-      adjacent_spaces << {
-        coords: [x - 1, y - 1],
-        content: @grid[x - 1][y - 1]
-      }
+    adjacent_spaces.reject! do |space|
+      space[0] > size - 1 || space[0] < 0 || space[1] > size - 1 || space[1] < 0
     end
 
-    adjacent_spaces
+    adjacent_spaces.map do |x, y|
+      {
+        coords: [x, y],
+        content: @grid[x][y]
+      }
+    end
   end
 end
