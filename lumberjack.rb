@@ -5,6 +5,9 @@ class Lumberjack < Slottable
   # Spawn in 10% of slots.
   SPAWN_RATE = 0.1
 
+  # Move a maximum of 3 times per tick.
+  MAX_MOVEMENT = 3
+
   # @attr [Boolean] Whether the Lumberjack has acted already this tick. This
   #                 prevents us from repeatedly moving the same Lumberjack
   #                 in the same tick as we iterate through the grid.

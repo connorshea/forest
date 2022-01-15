@@ -5,6 +5,9 @@ class Bear < Slottable
   # Spawn in 2% of slots.
   SPAWN_RATE = 0.02
 
+  # Move a maximum of 5 times per tick.
+  MAX_MOVEMENT = 5
+
   # @attr [Boolean] Whether the Bear has acted already this tick. This
   #                 prevents us from repeatedly moving the same Bear
   #                 in the same tick as we iterate through the grid.

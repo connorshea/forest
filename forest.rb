@@ -230,7 +230,7 @@ class Forest
     curr_x = x
     curr_y = y
 
-    until movements >= 3
+    until movements >= Lumberjack::MAX_MOVEMENT
       movements += 1
       stop_wandering = false
 
@@ -321,7 +321,7 @@ class Forest
     curr_y = y
 
     # Do Bear stuff, mawing and whatnot.
-    until movements >= 5
+    until movements >= Bear::MAX_MOVEMENT
       movements += 1
       stop_wandering = false
 
