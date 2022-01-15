@@ -52,6 +52,19 @@ class Forest
     end
 
     puts "Month [#{@month.to_s.rjust(4, '0')}]: [#{new_saplings_spawned}] new saplings created."
+    if @month % 12 == 0
+      flat_grid = @grid.flatten
+
+      trees = flat_grid.filter { |slot| slot.is_a?(Tree) && slot.type == :tree }.size
+      saplings = flat_grid.filter { |slot| slot.is_a?(Tree) && slot.type == :sapling }.size
+      elder_trees = flat_grid.filter { |slot| slot.is_a?(Tree) && slot.type == :elder_tree }.size
+      lumberjacks = flat_grid.filter { |slot| slot.is_a?(Lumberjack) }.size
+      bears = flat_grid.filter { |slot| slot.is_a?(Bear) }.size
+
+      puts "Year [#{(@month / 12).to_s.rjust(3, '0')}]: has #{trees} Trees, #{saplings} Saplings, #{elder_trees} Elder Trees, #{lumberjacks} Lumberjacks, and #{bears} Bears."
+      # TODO: The logic for spawning bears if there are too few.
+      # puts "Year [#{(@month / 12).to_s.rjust(3, '0')}]: #{num_bears_added} Bears added."
+    end
     @month += 1
 
     # If there are no trees left, end the simulation.
