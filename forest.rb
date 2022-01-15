@@ -24,7 +24,9 @@ class Forest
   end
 
   # Handle tree sapling planting on each tick. We can't do this from the Tree class because it doesn't have information about the grid, unfortunately.
-  def tick!
+  def tick!(month)
+    new_saplings_spawned = 0
+
     @grid.each_with_index do |row, y|
       row.each_with_index do |slot, x|
         if slot.is_a?(Tree)
@@ -34,6 +36,7 @@ class Forest
             empty_adjacent_space = adjacent_spaces.filter { |space| space[:content].nil? }.sample
 
             unless empty_adjacent_space.nil?
+              new_saplings_spawned += 1
               populate(empty_adjacent_space[:coords][0], empty_adjacent_space[:coords][1], Tree.new(type: :sapling, age: 0))
             end
           end
@@ -42,6 +45,8 @@ class Forest
         end
       end
     end
+
+    puts "Month [#{month.to_s.rjust(4, '0')}]: [#{new_saplings_spawned}] new saplings created."
   end
 
   # Populates the grid with bears and trees and lumberjacks.

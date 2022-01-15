@@ -8,9 +8,12 @@ SIZE = 10
 
 forest = Forest.new(size: SIZE)
 
+month = 1
+
 loop do
   puts forest.pretty_inspect
   puts 'Tick!'
-  forest.tick!
+  forest.tick!(month)
   sleep 1
+  month += 1
 end
