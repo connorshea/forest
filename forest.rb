@@ -95,7 +95,7 @@ class Forest
 
             # If the new slot is nil, populate the new slot, empty the old
             # slot, and update the current x and y coords.
-            if new_space_to_move_to[:content]&.nil?
+            if new_space_to_move_to[:content].nil?
               populate(*new_space_to_move_to[:coords], slottable)
               empty_slot!(curr_x, curr_y)
               curr_x, curr_y = *new_space_to_move_to[:coords]
@@ -158,7 +158,64 @@ class Forest
           curr_x = x
           curr_y = y
 
-          # TODO: Do Bear stuff, mawing and whatnot.
+          # Do Bear stuff, mawing and whatnot.
+          until movements >= 5
+            movements += 1
+            stop_wandering = false
+
+            # Get spaces which are adjacent to this bear.
+            # Then filter out trees (since bears can't interact with trees)
+            # and other bears (since there's no interaction between bears,
+            # so we don't want them to move onto the same tile).
+            adjacent_spaces = get_adjacent_spaces(curr_x, curr_y)
+            new_space_to_move_to = adjacent_spaces.reject do |space|
+              space[:content]&.any_tree? || space[:content]&.bear?
+            end.sample
+
+            # Just stop wandering if there's nothing to move to, since there
+            # aren't any valid spaces for the bear to move to.
+            break if new_space_to_move_to.nil?
+
+            # If the new slot is nil, populate the new slot, empty the old
+            # slot, and update the current x and y coords.
+            if new_space_to_move_to[:content].nil?
+              populate(*new_space_to_move_to[:coords], slottable)
+              empty_slot!(curr_x, curr_y)
+              curr_x, curr_y = *new_space_to_move_to[:coords]
+            end
+
+            # If the Bear moves onto a slot with a Lumberjack, maw them.
+            if new_space_to_move_to[:content]&.lumberjack?
+              # Empty the original slot since we don't want the bear to
+              # be in that old slot anymore.
+              empty_slot!(curr_x, curr_y)
+
+              # Empty the new slot since we don't want the lumberjack to
+              # be in that slot, since they're being mawed.
+              empty_slot!(*new_space_to_move_to[:coords])
+
+              # Populate the new slot with the bear since we've mawed the
+              # lumberjack. Then update the current x and current y to the
+              # new coordinates.
+              populate(*new_space_to_move_to[:coords], slottable)
+              curr_x, curr_y = *new_space_to_move_to[:coords]
+
+              # Increment the Mawing Counter™.
+              newly_mawed_lumberjacks += 1
+
+              # If we reach zero lumberjacks because the last one was mawed,
+              # spawn a new one somewhere.
+              if count_lumberjacks.zero?
+                populate_an_empty_grid_space(Lumberjack.new)
+              end
+
+              stop_wandering = true
+            end
+
+            # If we want to stop wandering because we've hit a lumberjack,
+            # break the loop and stop wandering.
+            break if stop_wandering
+          end
 
           slottable.tick!
         end
