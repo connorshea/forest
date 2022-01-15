@@ -24,6 +24,10 @@ class Forest
   # @attr [Integer] The current amount of total Mawings.
   attr_accessor :mawings
 
+  # @attr [Hash] A hash for tracking per-tick statistics, will be reset to the
+  #              default after every tick.
+  attr_accessor :tick_stats
+
   # @param size [Integer] The width and height of the grid.
   def initialize(size:)
     @size = size
@@ -32,6 +36,12 @@ class Forest
     @month = 1
     @lumber = 0
     @mawings = 0
+    @tick_stats = {
+      new_saplings_spawned: 0,
+      new_elder_trees_spawned: 0,
+      newly_mawed_lumberjacks: 0,
+      newly_harvested_lumber: 0
+    }
 
     populate_grid!
   end
@@ -41,11 +51,13 @@ class Forest
   #
   # @return [Boolean] Whether to continue to the next tick.
   def tick!
-    # These values are reset on every tick.
-    new_saplings_spawned = 0
-    new_elder_trees_spawned = 0
-    newly_harvested_lumber = 0
-    newly_mawed_lumberjacks = 0
+    # Reset tick stats on every tick.
+    @tick_stats = {
+      new_saplings_spawned: 0,
+      new_elder_trees_spawned: 0,
+      newly_mawed_lumberjacks: 0,
+      newly_harvested_lumber: 0
+    }
 
     @grid.each_with_index do |row, y|
       row.each_with_index do |slottable, x|
@@ -55,13 +67,13 @@ class Forest
           spawn_sapling = slottable.tick!
           # When the tree becomes 120 months old, it becomes an elder tree.
           # So we want to track that to output later.
-          new_elder_trees_spawned += 1 if slottable.age == 120
+          @tick_stats[:new_elder_trees_spawned] += 1 if slottable.age == 120
           if spawn_sapling
             adjacent_spaces = get_adjacent_spaces(x, y)
             empty_adjacent_space = adjacent_spaces.filter { |space| space[:content].nil? }.sample
 
             unless empty_adjacent_space.nil?
-              new_saplings_spawned += 1
+              @tick_stats[:new_saplings_spawned] += 1
               populate(empty_adjacent_space[:coords][0], empty_adjacent_space[:coords][1], Tree.new(type: :sapling, age: 0))
             end
           end
@@ -105,8 +117,8 @@ class Forest
             # can't be a sapling.
             if new_space_to_move_to[:content]&.any_tree?
               # Harvest some lumber depending on the type of tree in the slot.
-              newly_harvested_lumber += 1 if new_space_to_move_to[:content]&.tree?
-              newly_harvested_lumber += 2 if new_space_to_move_to[:content]&.elder_tree?
+              @tick_stats[:newly_harvested_lumber] += 1 if new_space_to_move_to[:content]&.tree?
+              @tick_stats[:newly_harvested_lumber] += 2 if new_space_to_move_to[:content]&.elder_tree?
 
               # Empty the slot since we harvested the tree, then populate it
               # with the lumberjack.
@@ -130,7 +142,7 @@ class Forest
               # be in that old slot anymore.
               empty_slot!(curr_x, curr_y)
               # Increment the Mawing Counter™.
-              newly_mawed_lumberjacks += 1
+              @tick_stats[:newly_mawed_lumberjacks] += 1
 
               # If we reach zero lumberjacks because the last one was mawed,
               # spawn a new one somewhere.
@@ -151,85 +163,19 @@ class Forest
           # Skip this Bear if it's already acted on this tick.
           next if slottable.acted_on_current_tick?
 
-          # Track movements, Bear can only have 5 at most.
-          movements = 0
-          # Copy the current x and y so we can update it to match the location
-          # of the bear after each movement.
-          curr_x = x
-          curr_y = y
-
-          # Do Bear stuff, mawing and whatnot.
-          until movements >= 5
-            movements += 1
-            stop_wandering = false
-
-            # Get spaces which are adjacent to this bear.
-            # Then filter out trees (since bears can't interact with trees)
-            # and other bears (since there's no interaction between bears,
-            # so we don't want them to move onto the same tile).
-            adjacent_spaces = get_adjacent_spaces(curr_x, curr_y)
-            new_space_to_move_to = adjacent_spaces.reject do |space|
-              space[:content]&.any_tree? || space[:content]&.bear?
-            end.sample
-
-            # Just stop wandering if there's nothing to move to, since there
-            # aren't any valid spaces for the bear to move to.
-            break if new_space_to_move_to.nil?
-
-            # If the new slot is nil, populate the new slot, empty the old
-            # slot, and update the current x and y coords.
-            if new_space_to_move_to[:content].nil?
-              populate(*new_space_to_move_to[:coords], slottable)
-              empty_slot!(curr_x, curr_y)
-              curr_x, curr_y = *new_space_to_move_to[:coords]
-            end
-
-            # If the Bear moves onto a slot with a Lumberjack, maw them.
-            if new_space_to_move_to[:content]&.lumberjack?
-              # Empty the original slot since we don't want the bear to
-              # be in that old slot anymore.
-              empty_slot!(curr_x, curr_y)
-
-              # Empty the new slot since we don't want the lumberjack to
-              # be in that slot, since they're being mawed.
-              empty_slot!(*new_space_to_move_to[:coords])
-
-              # Populate the new slot with the bear since we've mawed the
-              # lumberjack. Then update the current x and current y to the
-              # new coordinates.
-              populate(*new_space_to_move_to[:coords], slottable)
-              curr_x, curr_y = *new_space_to_move_to[:coords]
-
-              # Increment the Mawing Counter™.
-              newly_mawed_lumberjacks += 1
-
-              # If we reach zero lumberjacks because the last one was mawed,
-              # spawn a new one somewhere.
-              if count_lumberjacks.zero?
-                populate_an_empty_grid_space(Lumberjack.new)
-              end
-
-              stop_wandering = true
-            end
-
-            # If we want to stop wandering because we've hit a lumberjack,
-            # break the loop and stop wandering.
-            break if stop_wandering
-          end
-
-          slottable.tick!
+          bear_think(slottable, x, y)
         end
       end
     end
 
     # Monthly outputs.
-    puts "Month [#{formatted_month_number}]: [#{new_saplings_spawned}] new saplings created." unless new_saplings_spawned.zero?
-    puts "Month [#{formatted_month_number}]: [#{new_elder_trees_spawned}] trees became elder trees." unless new_elder_trees_spawned.zero?
-    puts "Month [#{formatted_month_number}]: [#{newly_mawed_lumberjacks}] Lumberjacks were Maw'd by bears." unless newly_mawed_lumberjacks.zero?
-    puts "Month [#{formatted_month_number}]: [#{newly_harvested_lumber}] pieces of lumber harvested by Lumberjacks." unless newly_harvested_lumber.zero?
+    puts "Month [#{formatted_month_number}]: [#{@tick_stats[:new_saplings_spawned]}] new saplings created." unless @tick_stats[:new_saplings_spawned].zero?
+    puts "Month [#{formatted_month_number}]: [#{@tick_stats[:new_elder_trees_spawned]}] trees became elder trees." unless @tick_stats[:new_elder_trees_spawned].zero?
+    puts "Month [#{formatted_month_number}]: [#{@tick_stats[:newly_mawed_lumberjacks]}] Lumberjacks were Maw'd by bears." unless @tick_stats[:newly_mawed_lumberjacks].zero?
+    puts "Month [#{formatted_month_number}]: [#{@tick_stats[:newly_harvested_lumber]}] pieces of lumber harvested by Lumberjacks." unless @tick_stats[:newly_harvested_lumber].zero?
 
-    @mawings += newly_mawed_lumberjacks
-    @lumber += newly_harvested_lumber
+    @mawings += @tick_stats[:newly_mawed_lumberjacks]
+    @lumber += @tick_stats[:newly_harvested_lumber]
 
     if @month % 12 == 0
       puts "Year [#{formatted_year_number}]: has #{count_trees} Trees, #{count_saplings} Saplings, #{count_elder_trees} Elder Trees, #{count_lumberjacks} Lumberjacks, and #{count_bears} Bears."
@@ -324,7 +270,9 @@ class Forest
     end
   end
 
-  # Recurses until it finds an empty grid space to place the slottable.
+  # Loops until it finds an empty grid space to place the slottable.
+  # TODO: Optimize this by filtering down to the coordinates of empty slots and then picking a random value there.
+  #
   # @param slottable [Slottable]
   # @return [void]
   def populate_an_empty_grid_space(slottable)
@@ -335,6 +283,82 @@ class Forest
         break
       end
     end
+  end
+
+  # Perform a tick for the bear.
+  #
+  # @param slottable [Bear]
+  # @param x [Integer]
+  # @param y [Integer]
+  # @return [void]
+  def bear_think(slottable, x, y)
+    # Track movements so we don't go above the max movements for the bear.
+    movements = 0
+    # Copy the current x and y so we can update it to match the location
+    # of the bear after each movement.
+    curr_x = x
+    curr_y = y
+
+    # Do Bear stuff, mawing and whatnot.
+    until movements >= 5
+      movements += 1
+      stop_wandering = false
+
+      # Get spaces which are adjacent to this bear.
+      # Then filter out trees (since bears can't interact with trees)
+      # and other bears (since there's no interaction between bears,
+      # so we don't want them to move onto the same tile).
+      adjacent_spaces = get_adjacent_spaces(curr_x, curr_y)
+      new_space_to_move_to = adjacent_spaces.reject do |space|
+        space[:content]&.any_tree? || space[:content]&.bear?
+      end.sample
+
+      # Just stop wandering if there's nothing to move to, since there
+      # aren't any valid spaces for the bear to move to.
+      break if new_space_to_move_to.nil?
+
+      # If the new slot is nil, populate the new slot, empty the old
+      # slot, and update the current x and y coords.
+      if new_space_to_move_to[:content].nil?
+        populate(*new_space_to_move_to[:coords], slottable)
+        empty_slot!(curr_x, curr_y)
+        curr_x, curr_y = *new_space_to_move_to[:coords]
+      end
+
+      # If the Bear moves onto a slot with a Lumberjack, maw them.
+      if new_space_to_move_to[:content]&.lumberjack?
+        # Empty the original slot since we don't want the bear to
+        # be in that old slot anymore.
+        empty_slot!(curr_x, curr_y)
+
+        # Empty the new slot since we don't want the lumberjack to
+        # be in that slot, since they're being mawed.
+        empty_slot!(*new_space_to_move_to[:coords])
+
+        # Populate the new slot with the bear since we've mawed the
+        # lumberjack. Then update the current x and current y to the
+        # new coordinates.
+        populate(*new_space_to_move_to[:coords], slottable)
+        curr_x, curr_y = *new_space_to_move_to[:coords]
+
+        # Increment the Mawing Counter™.
+        @tick_stats[:newly_mawed_lumberjacks] += 1
+
+        # If we reach zero lumberjacks because the last one was mawed,
+        # spawn a new one somewhere.
+        if count_lumberjacks.zero?
+          populate_an_empty_grid_space(Lumberjack.new)
+        end
+
+        stop_wandering = true
+      end
+
+      # If we want to stop wandering because we've hit a lumberjack,
+      # break the loop and stop wandering.
+      break if stop_wandering
+    end
+
+    slottable.tick!
   end
 
   # Empty a slot on the grid.
