@@ -276,7 +276,7 @@ class Forest
           populate_an_empty_grid_space(Lumberjack.new)
         end
 
-        # TODO: Do we care that this is inaccurate in some cases?
+        # We don't really care that this is inaccurate in some cases (e.g. if the last lumberjack is fired).
         puts "Year [#{formatted_year_number}]: #{@lumber} pieces of lumber harvested, 1 Lumberjack fired."
       else
         lumberjacks_hired = (@lumber / count_lumberjacks).floor
@@ -439,6 +439,7 @@ class Forest
       [x + 1, y + 1]
     ]
 
+    # Filter out adjacent spaces that are out of bounds.
     adjacent_spaces.reject! do |space|
       space[0] > size - 1 || space[0] < 0 || space[1] > size - 1 || space[1] < 0
     end
