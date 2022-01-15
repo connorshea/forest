@@ -187,6 +187,7 @@ class Forest
         bear_coords = []
         @grid.each_with_index do |row, y|
           row.each_with_index do |slottable, x|
+            next if slottable.nil?
             bear_coords << [x, y] if slottable.bear?
           end
         end
@@ -202,6 +203,7 @@ class Forest
         lumberjack_coords = []
         @grid.each_with_index do |row, y|
           row.each_with_index do |slottable, x|
+            next if slottable.nil?
             lumberjack_coords << [x, y] if slottable.lumberjack?
           end
         end
