@@ -14,17 +14,22 @@ class Forest
   # @attr [Array<Array<Bear, Tree, Lumberjack, nil>] The grid of items, will be all nils by default.
   attr_accessor :grid
 
+  # @attr [Integer] The current month of the simulation.
+  attr_accessor :month
+
   # @param size [Integer] The width and height of the grid.
   def initialize(size:)
     @size = size
     @total_grid_size = size * size
     @grid = Array.new(size) { Array.new(size) }
+    @month = 1
 
     populate_grid!
   end
 
   # Handle tree sapling planting on each tick. We can't do this from the Tree class because it doesn't have information about the grid, unfortunately.
-  def tick!(month)
+  # @return [Boolean] Whether to continue to the next tick.
+  def tick!
     new_saplings_spawned = 0
 
     @grid.each_with_index do |row, y|
@@ -46,26 +51,34 @@ class Forest
       end
     end
 
-    puts "Month [#{month.to_s.rjust(4, '0')}]: [#{new_saplings_spawned}] new saplings created."
+    puts "Month [#{@month.to_s.rjust(4, '0')}]: [#{new_saplings_spawned}] new saplings created."
+    @month += 1
+
+    # If there are no trees left, end the simulation.
+    return false unless @grid.flatten.map(&:class).uniq.include?(Tree)
+    # End the simulation after 400 years.
+    return false if @month > 4800
+
+    true
   end
 
   # Populates the grid with bears and trees and lumberjacks.
   # @return [void]
   def populate_grid!
     bears_to_spawn = (Bear::SPAWN_RATE * total_grid_size).round
-    puts "Spawning #{bears_to_spawn} Bears..."
+    puts "Spawning #{bears_to_spawn} Bears..." if ENV['DEBUG']
     bears_to_spawn.times do
       populate_an_empty_grid_space(Bear.new)
     end
 
     trees_to_spawn = (Tree::SPAWN_RATE * total_grid_size).round
-    puts "Spawning #{trees_to_spawn} Trees..."
+    puts "Spawning #{trees_to_spawn} Trees..." if ENV['DEBUG']
     trees_to_spawn.times do
       populate_an_empty_grid_space(Tree.new(type: :tree, age: 12))
     end
 
     lumberjacks_to_spawn = (Lumberjack::SPAWN_RATE * total_grid_size).round
-    puts "Spawning #{lumberjacks_to_spawn} Lumberjacks..."
+    puts "Spawning #{lumberjacks_to_spawn} Lumberjacks..." if ENV['DEBUG']
     lumberjacks_to_spawn.times do
       populate_an_empty_grid_space(Lumberjack.new)
     end

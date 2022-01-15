@@ -8,12 +8,13 @@ SIZE = 10
 
 forest = Forest.new(size: SIZE)
 
-month = 1
-
 loop do
-  puts forest.pretty_inspect
-  puts 'Tick!'
-  forest.tick!(month)
+  puts forest.pretty_inspect if ENV['DEBUG']
+  puts 'Tick!' if ENV['DEBUG']
+  continue = forest.tick!
+  unless continue
+    puts "Ending simulation."
+    break
+  end
   sleep 1
-  month += 1
 end
