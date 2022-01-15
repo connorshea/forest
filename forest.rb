@@ -21,6 +21,9 @@ class Forest
   # @attr [Integer] The current amount of total Lumber.
   attr_accessor :lumber
 
+  # @attr [Integer] The current amount of total Mawings.
+  attr_accessor :mawings
+
   # @param size [Integer] The width and height of the grid.
   def initialize(size:)
     @size = size
@@ -28,16 +31,21 @@ class Forest
     @grid = Array.new(size) { Array.new(size) }
     @month = 1
     @lumber = 0
+    @mawings = 0
 
     populate_grid!
   end
 
-  # Handle tree sapling planting on each tick. We can't do this from the Tree class because it doesn't have information about the grid, unfortunately.
+  # Handle actions for the Slottables on each tick. We can't do this from the
+  # individual classes because they don't have information about the grid.
+  #
   # @return [Boolean] Whether to continue to the next tick.
   def tick!
+    # These values are reset on every tick.
     new_saplings_spawned = 0
     new_elder_trees_spawned = 0
     newly_harvested_lumber = 0
+    newly_mawed_lumberjacks = 0
 
     @grid.each_with_index do |row, y|
       row.each_with_index do |slottable, x|
@@ -132,8 +140,8 @@ class Forest
               empty_slot!(*new_space_to_move_to[:coords])
               populate(*new_space_to_move_to[:coords], slottable)
 
-              # Empty the original slot since we don't want the lumberjack to be
-              # in that old slot anymore.
+              # Empty the original slot since we don't want the lumberjack to
+              # be in that old slot anymore.
               empty_slot!(curr_x, curr_y)
 
               # Update the current x and current y to the new coordinates.
@@ -143,8 +151,14 @@ class Forest
               stop_wandering = true
             end
 
+            # If the Lumberjack moves onto a slot with a bear, they get mawed.
             if new_space_to_move_to[:content]&.bear?
-              # TODO: handle what happens if the contents of the slot is a bear.
+              # Empty the original slot since we don't want the lumberjack to
+              # be in that old slot anymore.
+              empty_slot!(curr_x, curr_y)
+              # Increment the Mawing Counter™.
+              newly_mawed_lumberjacks += 1
+
               stop_wandering = true
             end
 
@@ -165,19 +179,46 @@ class Forest
           curr_x = x
           curr_y = y
 
+          # TODO: Do Bear stuff, mawing and whatnot.
+
           slottable.tick!
         end
       end
     end
 
     # Monthly outputs.
-    puts "Month [#{@month.to_s.rjust(4, '0')}]: [#{new_saplings_spawned}] new saplings created." unless new_saplings_spawned.zero?
-    puts "Month [#{@month.to_s.rjust(4, '0')}]: [#{new_elder_trees_spawned}] trees became elder trees." unless new_elder_trees_spawned.zero?
+    puts "Month [#{formatted_month_number}]: [#{new_saplings_spawned}] new saplings created." unless new_saplings_spawned.zero?
+    puts "Month [#{formatted_month_number}]: [#{new_elder_trees_spawned}] trees became elder trees." unless new_elder_trees_spawned.zero?
+    puts "Month [#{formatted_month_number}]: [#{newly_mawed_lumberjacks}] Lumberjacks were Maw'd by bears." unless newly_mawed_lumberjacks.zero?
+    puts "Month [#{formatted_month_number}]: [#{newly_harvested_lumber}] pieces of lumber harvested by Lumberjacks." unless newly_harvested_lumber.zero?
+
+    @mawings += newly_mawed_lumberjacks
+    @lumber += newly_harvested_lumber
 
     if @month % 12 == 0
-      puts "Year [#{(@month / 12).to_s.rjust(3, '0')}]: has #{count_trees} Trees, #{count_saplings} Saplings, #{count_elder_trees} Elder Trees, #{count_lumberjacks} Lumberjacks, and #{count_bears} Bears."
-      # TODO: The logic for spawning bears if there are too few.
-      # puts "Year [#{(@month / 12).to_s.rjust(3, '0')}]: #{num_bears_added} Bears added."
+      puts "Year [#{formatted_year_number}]: has #{count_trees} Trees, #{count_saplings} Saplings, #{count_elder_trees} Elder Trees, #{count_lumberjacks} Lumberjacks, and #{count_bears} Bears."
+
+      # Spawn a new bear if there were no mawings this year.
+      # Otherwise, pick a random bear from the grid and then have the Zoo
+      # catch it.
+      if @mawings.zero?
+        populate_an_empty_grid_space(Bear.new)
+        puts "Year [#{formatted_year_number}]: 1 new Bear added."
+      else
+        bear_coords = []
+        @grid.each_with_index do |row, y|
+          row.each_with_index do |slottable, x|
+            bear_coords << [x, y] if slottable.bear?
+          end
+        end
+
+        empty_slot!(*bear_coords.sample)
+        puts "Year [#{formatted_year_number}]: 1 Bear captured by Zoo."
+      end
+
+      # Each year, reset mawings and lumber to zero.
+      @mawings = 0
+      @lumber = 0
     end
     @month += 1
 
@@ -354,5 +395,21 @@ class Forest
         end
       end
     end
+  end
+
+  private
+
+  # Converts the months into a value with leading 0s (if necessary).
+  #
+  # @return [String]
+  def formatted_month_number
+    @month.to_s.rjust(4, '0')
+  end
+
+  # Converts the months into a year value with leading 0s (if necessary).
+  #
+  # @return [String]
+  def formatted_year_number
+    (@month / 12).to_s.rjust(3, '0')
   end
 end
