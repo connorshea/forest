@@ -453,7 +453,7 @@ class Forest
   #
   # @return [void]
   def perform_annual_actions
-    puts "Year [#{formatted_year_number}]: has #{count_trees} Trees, #{count_saplings} Saplings, #{count_elder_trees} Elder Trees, #{count_lumberjacks} Lumberjacks, and #{count_bears} Bears."
+    puts "Year [#{formatted_year_number}]: Forest has #{count_trees} Trees, #{count_saplings} Saplings, #{count_elder_trees} Elder Trees, #{count_lumberjacks} Lumberjacks, and #{count_bears} Bears."
 
     # Spawn a new bear if there were no mawings this year.
     # Otherwise, pick a random bear from the grid and then have the Zoo
