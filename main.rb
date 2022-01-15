@@ -1,9 +1,11 @@
-require 'bear'
-require 'forest'
-require 'lumberjack'
-require 'tree'
+require_relative 'bear'
+require_relative 'forest'
+require_relative 'lumberjack'
+require_relative 'tree'
 
 # TODO: Make this an argument to the script.
 SIZE = 10
 
-forest = Forest.new(SIZE)
+forest = Forest.new(size: SIZE)
+
+puts forest.pretty_inspect

@@ -6,4 +6,9 @@ class Lumberjack
   def initialize
     # TODO
   end
+
+  # @return [String] Return a string representing this, for rendering in a grid.
+  def representation
+    'L'
+  end
 end
