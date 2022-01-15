@@ -1,5 +1,7 @@
+require_relative 'slottable'
+
 # It's a tree.
-class Tree
+class Tree < Slottable
   # Spawn in 50% of slots.
   SPAWN_RATE = 0.5
 

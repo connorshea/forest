@@ -1,6 +1,7 @@
 require_relative 'bear'
 require_relative 'lumberjack'
 require_relative 'tree'
+require_relative 'slottable'
 require 'debug'
 
 # It's the forest. Simple.
@@ -11,7 +12,7 @@ class Forest
   # @attr [Integer]
   attr_reader :total_grid_size
 
-  # @attr [Array<Array<Bear, Tree, Lumberjack, nil>] The grid of items, will be all nils by default.
+  # @attr [Array<Array<Slottable, nil>] The grid of items, will be all nils by default.
   attr_accessor :grid
 
   # @attr [Integer] The current month of the simulation.
@@ -35,8 +36,10 @@ class Forest
 
     @grid.each_with_index do |row, y|
       row.each_with_index do |slot, x|
-        if slot.is_a?(Tree)
-          spawn_sapling = slot&.tick!
+        next if slot.nil?
+
+        if slot.any_tree?
+          spawn_sapling = slot.tick!
           # When the tree becomes 120 months old, it becomes an elder tree.
           # So we want to track that to output later.
           new_elder_trees_spawned += 1 if slot.age == 120
@@ -49,16 +52,16 @@ class Forest
               populate(empty_adjacent_space[:coords][0], empty_adjacent_space[:coords][1], Tree.new(type: :sapling, age: 0))
             end
           end
-        elsif slot.is_a?(Lumberjack)
+        elsif slot.lumberjack?
           # Track movements, Lumberjack can only have 3 at most.
           movements = 0
           until movements >= 3
             movements += 1
             # TODO
           end
-          slot&.tick!
-        elsif slot.is_a?(Bear)
-          slot&.tick!
+          slot.tick!
+        elsif slot.bear?
+          slot.tick!
         end
       end
     end
@@ -70,11 +73,11 @@ class Forest
     if @month % 12 == 0
       flat_grid = @grid.flatten
 
-      trees = flat_grid.filter { |slot| slot.is_a?(Tree) && slot.type == :tree }.size
-      saplings = flat_grid.filter { |slot| slot.is_a?(Tree) && slot.type == :sapling }.size
-      elder_trees = flat_grid.filter { |slot| slot.is_a?(Tree) && slot.type == :elder_tree }.size
-      lumberjacks = flat_grid.filter { |slot| slot.is_a?(Lumberjack) }.size
-      bears = flat_grid.filter { |slot| slot.is_a?(Bear) }.size
+      trees = flat_grid.compact.filter(&:tree?).size
+      saplings = flat_grid.compact.filter(&:sapling?).size
+      elder_trees = flat_grid.compact.filter(&:elder_tree?).size
+      lumberjacks = flat_grid.compact.filter(&:lumberjack?).size
+      bears = flat_grid.compact.filter(&:bear?).size
 
       puts "Year [#{(@month / 12).to_s.rjust(3, '0')}]: has #{trees} Trees, #{saplings} Saplings, #{elder_trees} Elder Trees, #{lumberjacks} Lumberjacks, and #{bears} Bears."
       # TODO: The logic for spawning bears if there are too few.
@@ -83,7 +86,7 @@ class Forest
     @month += 1
 
     # If there are no trees left, end the simulation.
-    return false unless @grid.flatten.map(&:class).uniq.include?(Tree)
+    return false unless @grid.flatten.compact.any?(&:any_tree?)
     # End the simulation after 400 years.
     return false if @month > 4800
 
@@ -112,14 +115,14 @@ class Forest
     end
   end
 
-  # Recurses until it finds an empty grid space to place the populator.
-  # @param populator [Bear, Tree, Lumberjack]
+  # Recurses until it finds an empty grid space to place the slottable.
+  # @param slottable [Slottable]
   # @return [void]
-  def populate_an_empty_grid_space(populator)
+  def populate_an_empty_grid_space(slottable)
     loop do
       rand_num = rand(total_grid_size)
       if @grid[rand_num / size][rand_num % size].nil?
-        populate(rand_num / size, rand_num % size, populator)
+        populate(rand_num / size, rand_num % size, slottable)
         break
       end
     end
@@ -127,12 +130,12 @@ class Forest
 
   # @param x [Integer]
   # @param y [Integer]
-  # @param populator [Bear, Tree, Lumberjack, nil] 
+  # @param slottable [Slottable, nil] 
   # @param [void]
-  def populate(x, y, populator)
+  def populate(x, y, slottable)
     raise StandardError, "This space is already populated!" unless @grid[x][y].nil?
 
-    @grid[x][y] = populator
+    @grid[x][y] = slottable
   end
 
   # @return [String]

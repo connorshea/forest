@@ -1,11 +1,11 @@
+require_relative 'slottable'
+
 # And they called him... The Tree Slayer.
-class Lumberjack
+class Lumberjack < Slottable
   # Spawn in 10% of slots.
   SPAWN_RATE = 0.1
 
-  def initialize
-    # TODO
-  end
+  def initialize; end
 
   # TODO: Do something on a tick.
   # @return [void]

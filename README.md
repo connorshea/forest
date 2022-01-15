@@ -29,7 +29,8 @@ How you get the size of the forest is up to you. Either users enter it in, read 
 ## Events
 
 During the simulation there will be events. The events occur based on some logic which I will explain below. The events essentially are the spawning of new Trees, Lumberjacks, Bears or the decay of Trees, Lumberjacks and Bears. I will detail the events below in each description of the 3 elements of our forest.
-Trees:
+
+### Trees
 
 Every month a Tree has a 10% chance to spawn a new "Sapling". In a random open space adjacent to a Tree you have a 10% chance to create a "Sapling". For example a Tree in the middle of the forest has 8 other spots around it. One of these if they do not have a type of Tree in it will create a "Sapling".
 
@@ -40,7 +41,8 @@ Once a "Sapling" becomes a tree it can spawn other new "Saplings". At this point
 Elder Trees have a 20% chance to spawn a new "Sapling" instead of 10%.
 
 If there are no open adjacent spots to a Tree or Elder Tree it will not spawn any new Trees.
-Lumberjacks:
+
+### Lumberjacks
 
 They cut down trees, they skip and jump they like to press wild flowers.
 
@@ -51,7 +53,8 @@ When the lumberjack moves if he encounters a Tree (not a sapling) he will stop a
 Every 12 months the amount of lumber harvested is compared to the number of lumberjacks in the forest. If the lumber collected equals or exceeds the amount of lumberjacks in the forest a new lumberjack is hired and randomly spawned in the forest. Actually a math formula is used to determine if we hire 1 or many lumberjacks. We hire a number of new lumberjacks based on lumber gathered. Let us say you have 10 lumberjacks. If you harvest 10-19 pieces of lumber you would hire 1 lumberjack. But if you harvest 20-29 pieces of lumber you would hire 2 lumberjacks. If you harvest 30-39 you would gain 3 lumberjacks. And so forth.
 
 However if after a 12 month span the amount of lumber collected is below the number of lumberjacks then a lumberjack is let go to save money and 1 random lumberjack is removed from the forest. However you will never reduce your Lumberjack labor force below 0.
-Bears:
+
+### Bears
 
 They wander the forest much like a lumberjack. Instead of 3 spaces a Bear will roam up to 5 spaces. If a bear comes across a Lumberjack he will stop his wandering for the month. (For example after 2 moves the bear lands on a space with a lumberjack he will not make any more moves for this month)
 
@@ -60,7 +63,8 @@ Lumberjacks smell like pancakes. Bears love pancakes. Therefore the Bear will un
 We will track this as a "Maw" accident. During the course of 12 months if there 0 "Maw" accidents then the Bear population will increase by 1. If however there are any "Maw" accidents the Lumberjacks will hire a Zoo to trap and take a Bear away. Remove 1 random Bear. Note that if your Bear population reaches 0 bears then there will be no "Maw" accidents in the next year and so you will spawn 1 new Bear next year.
 
 If there is only 1 lumberjack in the forest and he gets Maw'd. He will be sent home. But a new one will be hired immediately and respawned somewhere else in the forest. The lumberjack population will not drop below 1.
-Time:
+
+## Time
 
 The simulation occurs for 4800 months (400 years). Or until the following condition occur.
 

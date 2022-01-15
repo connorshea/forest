@@ -1,7 +1,11 @@
+require_relative 'slottable'
+
 # 🐻
-class Bear
+class Bear < Slottable
   # Spawn in 2% of slots.
   SPAWN_RATE = 0.02
+
+  def initialize; end
 
   # TODO: Do something on a tick.
   # @return [void]
