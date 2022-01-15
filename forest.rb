@@ -112,7 +112,6 @@ class Forest
             # slot, and update the current x and y coords.
             if new_space_to_move_to[:content]&.nil?
               populate(*new_space_to_move_to[:coords], slottable)
-              puts 'foo'
               empty_slot!(curr_x, curr_y)
               curr_x, curr_y = *new_space_to_move_to[:coords]
             end
@@ -124,21 +123,13 @@ class Forest
               newly_harvested_lumber += 1 if new_space_to_move_to[:content]&.tree?
               newly_harvested_lumber += 2 if new_space_to_move_to[:content]&.elder_tree?
 
-              puts "Lumberjack is at #{[curr_x, curr_y]}."
-              puts self.pretty_inspect
               # Empty the slot since we harvested the tree, then populate it
               # with the lumberjack.
-              puts 'bar'
-              puts "Emptying slot #{new_space_to_move_to[:coords]}"
               empty_slot!(*new_space_to_move_to[:coords])
-              puts "Populating slot #{new_space_to_move_to[:coords]} with lumberjack"
               populate(*new_space_to_move_to[:coords], slottable)
 
-              puts self.pretty_inspect
               # Empty the original slot since we don't want the lumberjack to be
               # in that old slot anymore.
-              puts 'baz'
-              puts "Emptying slot #{[curr_x, curr_y]}"
               empty_slot!(curr_x, curr_y)
 
               # Update the current x and current y to the new coordinates.
@@ -212,7 +203,7 @@ class Forest
   def populate_an_empty_grid_space(slottable)
     loop do
       rand_num = rand(total_grid_size)
-      if @grid[rand_num / size][rand_num % size].nil?
+      if @grid[rand_num % size][rand_num / size].nil?
         populate(rand_num / size, rand_num % size, slottable)
         break
       end
@@ -224,9 +215,11 @@ class Forest
   # @param y [Integer]
   # @param [void]
   def empty_slot!(x, y)
-    raise StandardError, "This space (#{[x, y]}) is already empty!" if @grid[x][y].nil?
+    raise StandardError, "This space (#{[x, y]}) is already empty!" if @grid[y][x].nil?
 
-    @grid[x][y] = nil
+    puts "Emptying #{[x, y]}." if ENV['DEBUG']
+
+    @grid[y][x] = nil
   end
 
   # @param x [Integer]
@@ -234,9 +227,10 @@ class Forest
   # @param slottable [Slottable, nil] 
   # @param [void]
   def populate(x, y, slottable)
-    raise StandardError, "This space (#{[x, y]}) is already populated!" unless @grid[x][y].nil?
+    raise StandardError, "This space (#{[x, y]}) is already populated!" unless @grid[y][x].nil?
 
-    @grid[x][y] = slottable
+    puts "Populating #{[x, y]} with #{slottable.class}." if ENV['DEBUG']
+    @grid[y][x] = slottable
   end
 
   # Count the number of any tree type.
@@ -319,7 +313,7 @@ class Forest
     adjacent_spaces.map do |x, y|
       {
         coords: [x, y],
-        content: @grid[x][y].dup
+        content: @grid[y][x].dup
       }
     end
   end
