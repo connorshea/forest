@@ -10,7 +10,10 @@
       "request": "launch",
       "script": "${file}",
       "args": [],
-      "askParameters": true
+      "askParameters": true,
+      "env": {
+        "DEBUG": true
+      }
     },
     {
       "type": "rdbg",
