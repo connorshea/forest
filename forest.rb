@@ -287,11 +287,11 @@ class Forest
 
   # Perform a tick for the bear.
   #
-  # @param slottable [Bear]
+  # @param bear [Bear]
   # @param x [Integer]
   # @param y [Integer]
   # @return [void]
-  def bear_think(slottable, x, y)
+  def bear_think(bear, x, y)
     # Track movements so we don't go above the max movements for the bear.
     movements = 0
     # Copy the current x and y so we can update it to match the location
@@ -320,7 +320,7 @@ class Forest
       # If the new slot is nil, populate the new slot, empty the old
       # slot, and update the current x and y coords.
       if new_space_to_move_to[:content].nil?
-        populate(*new_space_to_move_to[:coords], slottable)
+        populate(*new_space_to_move_to[:coords], bear)
         empty_slot!(curr_x, curr_y)
         curr_x, curr_y = *new_space_to_move_to[:coords]
       end
@@ -338,7 +338,7 @@ class Forest
         # Populate the new slot with the bear since we've mawed the
         # lumberjack. Then update the current x and current y to the
         # new coordinates.
-        populate(*new_space_to_move_to[:coords], slottable)
+        populate(*new_space_to_move_to[:coords], bear)
         curr_x, curr_y = *new_space_to_move_to[:coords]
 
         # Increment the Mawing Counter™.
@@ -358,7 +358,7 @@ class Forest
       break if stop_wandering
     end
 
-    slottable.tick!
+    bear.tick!
   end
 
   # Empty a slot on the grid.
