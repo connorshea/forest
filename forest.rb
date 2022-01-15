@@ -64,105 +64,10 @@ class Forest
         next if slottable.nil?
 
         if slottable.any_tree?
-          spawn_sapling = slottable.tick!
-          # When the tree becomes 120 months old, it becomes an elder tree.
-          # So we want to track that to output later.
-          @tick_stats[:new_elder_trees_spawned] += 1 if slottable.age == 120
-          if spawn_sapling
-            adjacent_spaces = get_adjacent_spaces(x, y)
-            empty_adjacent_space = adjacent_spaces.filter { |space| space[:content].nil? }.sample
-
-            unless empty_adjacent_space.nil?
-              @tick_stats[:new_saplings_spawned] += 1
-              populate(empty_adjacent_space[:coords][0], empty_adjacent_space[:coords][1], Tree.new(type: :sapling, age: 0))
-            end
-          end
+          tree_think(slottable, x, y)
         elsif slottable.lumberjack?
-          # Skip this Lumberjack if it's already acted on this tick.
-          next if slottable.acted_on_current_tick?
-
-          # Track movements, Lumberjack can only have 3 at most.
-          movements = 0
-          # Copy the current x and y so we can update it to match the location
-          # of the lumberjack after each movement.
-          curr_x = x
-          curr_y = y
-
-          until movements >= 3
-            movements += 1
-            stop_wandering = false
-
-            # Get spaces which are adjacent to this lumberjack.
-            # Then filter out saplings (since he can't cut those down)
-            # and other lumberjacks (since there's no interaction between
-            # lumberjacks, so we don't want them to move onto the same tile).
-            adjacent_spaces = get_adjacent_spaces(curr_x, curr_y)
-            new_space_to_move_to = adjacent_spaces.reject do |space|
-              space[:content]&.sapling? || space[:content]&.lumberjack?
-            end.sample
-
-            # Just stop wandering if there's nothing to move to, since there
-            # aren't any valid spaces for the lumberjack to move to.
-            break if new_space_to_move_to.nil?
-
-            # If the new slot is nil, populate the new slot, empty the old
-            # slot, and update the current x and y coords.
-            if new_space_to_move_to[:content].nil?
-              populate(*new_space_to_move_to[:coords], slottable)
-              empty_slot!(curr_x, curr_y)
-              curr_x, curr_y = *new_space_to_move_to[:coords]
-            end
-
-            # Just use `any_tree?` since we've already established that it
-            # can't be a sapling.
-            if new_space_to_move_to[:content]&.any_tree?
-              # Harvest some lumber depending on the type of tree in the slot.
-              @tick_stats[:newly_harvested_lumber] += 1 if new_space_to_move_to[:content]&.tree?
-              @tick_stats[:newly_harvested_lumber] += 2 if new_space_to_move_to[:content]&.elder_tree?
-
-              # Empty the slot since we harvested the tree, then populate it
-              # with the lumberjack.
-              empty_slot!(*new_space_to_move_to[:coords])
-              populate(*new_space_to_move_to[:coords], slottable)
-
-              # Empty the original slot since we don't want the lumberjack to
-              # be in that old slot anymore.
-              empty_slot!(curr_x, curr_y)
-
-              # Update the current x and current y to the new coordinates.
-              curr_x, curr_y = *new_space_to_move_to[:coords]
-
-              # Stop wandering after this.
-              stop_wandering = true
-            end
-
-            # If the Lumberjack moves onto a slot with a bear, they get mawed.
-            if new_space_to_move_to[:content]&.bear?
-              # Empty the original slot since we don't want the lumberjack to
-              # be in that old slot anymore.
-              empty_slot!(curr_x, curr_y)
-              # Increment the Mawing Counter™.
-              @tick_stats[:newly_mawed_lumberjacks] += 1
-
-              # If we reach zero lumberjacks because the last one was mawed,
-              # spawn a new one somewhere.
-              if count_lumberjacks.zero?
-                populate_an_empty_grid_space(Lumberjack.new)
-              end
-
-              stop_wandering = true
-            end
-
-            # If we want to stop wandering because we've hit a tree or bear,
-            # break the loop and stop wandering.
-            break if stop_wandering
-          end
-
-          slottable.tick!
+          lumberjack_think(slottable, x, y)
         elsif slottable.bear?
-          # Skip this Bear if it's already acted on this tick.
-          next if slottable.acted_on_current_tick?
-
           bear_think(slottable, x, y)
         end
       end
@@ -285,13 +190,129 @@ class Forest
     end
   end
 
-  # Perform a tick for the bear.
+  # Perform a tick for a tree.
+  #
+  # @param tree [Tree]
+  # @param x [Integer]
+  # @param y [Integer]
+  # @return [void]
+  def tree_think(tree, x, y)
+    spawn_sapling = tree.tick!
+
+    # When the tree becomes 120 months old, it becomes an elder tree.
+    # So we want to track that to output later.
+    @tick_stats[:new_elder_trees_spawned] += 1 if tree.age == 120
+    if spawn_sapling
+      adjacent_spaces = get_adjacent_spaces(x, y)
+      empty_adjacent_space = adjacent_spaces.filter { |space| space[:content].nil? }.sample
+
+      unless empty_adjacent_space.nil?
+        @tick_stats[:new_saplings_spawned] += 1
+        populate(empty_adjacent_space[:coords][0], empty_adjacent_space[:coords][1], Tree.new(type: :sapling, age: 0))
+      end
+    end
+  end
+
+  # Perform a tick for a lumberjack.
+  #
+  # @param lumberjack [Lumberjack]
+  # @param x [Integer]
+  # @param y [Integer]
+  # @return [void]
+  def lumberjack_think(lumberjack, x, y)
+    # Skip this Lumberjack if it's already acted on this tick.
+    return if lumberjack.acted_on_current_tick?
+
+    # Track movements so we don't go above the max movements for the lumberjack.
+    movements = 0
+    # Copy the current x and y so we can update it to match the location
+    # of the lumberjack after each movement.
+    curr_x = x
+    curr_y = y
+
+    until movements >= 3
+      movements += 1
+      stop_wandering = false
+
+      # Get spaces which are adjacent to this lumberjack.
+      # Then filter out saplings (since he can't cut those down)
+      # and other lumberjacks (since there's no interaction between
+      # lumberjacks, so we don't want them to move onto the same tile).
+      adjacent_spaces = get_adjacent_spaces(curr_x, curr_y)
+      new_space_to_move_to = adjacent_spaces.reject do |space|
+        space[:content]&.sapling? || space[:content]&.lumberjack?
+      end.sample
+
+      # Just stop wandering if there's nothing to move to, since there
+      # aren't any valid spaces for the lumberjack to move to.
+      break if new_space_to_move_to.nil?
+
+      # If the new slot is nil, populate the new slot, empty the old
+      # slot, and update the current x and y coords.
+      if new_space_to_move_to[:content].nil?
+        populate(*new_space_to_move_to[:coords], lumberjack)
+        empty_slot!(curr_x, curr_y)
+        curr_x, curr_y = *new_space_to_move_to[:coords]
+      end
+
+      # Just use `any_tree?` since we've already established that it
+      # can't be a sapling.
+      if new_space_to_move_to[:content]&.any_tree?
+        # Harvest some lumber depending on the type of tree in the slot.
+        @tick_stats[:newly_harvested_lumber] += 1 if new_space_to_move_to[:content]&.tree?
+        @tick_stats[:newly_harvested_lumber] += 2 if new_space_to_move_to[:content]&.elder_tree?
+
+        # Empty the slot since we harvested the tree, then populate it
+        # with the lumberjack.
+        empty_slot!(*new_space_to_move_to[:coords])
+        populate(*new_space_to_move_to[:coords], lumberjack)
+
+        # Empty the original slot since we don't want the lumberjack to
+        # be in that old slot anymore.
+        empty_slot!(curr_x, curr_y)
+
+        # Update the current x and current y to the new coordinates.
+        curr_x, curr_y = *new_space_to_move_to[:coords]
+
+        # Stop wandering after this.
+        stop_wandering = true
+      end
+
+      # If the Lumberjack moves onto a slot with a bear, they get mawed.
+      if new_space_to_move_to[:content]&.bear?
+        # Empty the original slot since we don't want the lumberjack to
+        # be in that old slot anymore.
+        empty_slot!(curr_x, curr_y)
+        # Increment the Mawing Counter™.
+        @tick_stats[:newly_mawed_lumberjacks] += 1
+
+        # If we reach zero lumberjacks because the last one was mawed,
+        # spawn a new one somewhere.
+        if count_lumberjacks.zero?
+          populate_an_empty_grid_space(Lumberjack.new)
+        end
+
+        stop_wandering = true
+      end
+
+      # If we want to stop wandering because we've hit a tree or bear,
+      # break the loop and stop wandering.
+      break if stop_wandering
+    end
+
+    lumberjack.tick!
+  end
+
+  # Perform a tick for a bear.
   #
   # @param bear [Bear]
   # @param x [Integer]
   # @param y [Integer]
   # @return [void]
   def bear_think(bear, x, y)
+    # Skip this Bear if it's already acted on this tick.
+    return if bear.acted_on_current_tick?
+
     # Track movements so we don't go above the max movements for the bear.
     movements = 0
     # Copy the current x and y so we can update it to match the location
