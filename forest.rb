@@ -159,6 +159,8 @@ class Forest
               # Increment the Mawing Counter™.
               newly_mawed_lumberjacks += 1
 
+              # TODO: If the number of lumberjacks reaches 0, spawn a new one
+
               stop_wandering = true
             end
 
@@ -211,9 +213,41 @@ class Forest
             bear_coords << [x, y] if slottable.bear?
           end
         end
-
         empty_slot!(*bear_coords.sample)
+
         puts "Year [#{formatted_year_number}]: 1 Bear captured by Zoo."
+      end
+
+      # Fire a lumberjack if the lumberjacks don't harvest more lumber than
+      # there are lumberjacks. Otherwise, hire new lumberjacks based on the
+      # amount of lumber harvested this year.
+      if @lumber < count_lumberjacks
+        lumberjack_coords = []
+        @grid.each_with_index do |row, y|
+          row.each_with_index do |slottable, x|
+            lumberjack_coords << [x, y] if slottable.lumberjack?
+          end
+        end
+
+        # Fire a random lumberjack unless there aren't any to fire.
+        # This _probably_ shouldn't ever happen because if the last lumberjack
+        # is mawed he'll be replaced immediately.
+        empty_slot!(*lumberjack_coords.sample) unless lumberjack_coords.size.zero?
+
+        # If we reach zero lumberjacks because we fired the last one, spawn a
+        # new one somewhere.
+        if count_lumberjacks.zero?
+          populate_an_empty_grid_space(Lumberjack.new)
+        end
+
+        # TODO: Do we care that this is inaccurate in some cases?
+        puts "Year [#{formatted_year_number}]: #{@lumber} pieces of lumber harvested, 1 Lumberjack fired."
+      else
+        lumberjacks_hired = (@lumber / count_lumberjacks).floor
+        lumberjacks_hired.times do
+          populate_an_empty_grid_space(Lumberjack.new)
+        end
+        puts "Year [#{formatted_year_number}]: #{@lumber} pieces of lumber harvested, #{lumberjacks_hired} new Lumberjack hired."
       end
 
       # Each year, reset mawings and lumber to zero.
