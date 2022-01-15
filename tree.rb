@@ -15,7 +15,9 @@ class Tree
   end
 
   # On a tick, age the tree by 1 tick.
-  # @return [void]
+  # Also check whether we can spawn a new sapling in an adjacent slot, and
+  # return a boolean for whether to spawn one.
+  # @return [Boolean]
   def tick!
     @age += 1
 
@@ -25,6 +27,19 @@ class Tree
       elsif @age > 12 && @type == :sapling
         @type = :tree
       end
+    end
+
+    # Return false if the tree is a sapling, since it can't spawn other saplings.
+    return false if @type == :sapling
+
+    rand_num = rand(100)
+
+    # If an elder_tree, 20% chance to spawn a sapling in an adjacent slot.
+    # If a tree, 10% chance to spawn a sapling in an adjacent slot.
+    if (@type == :elder_tree && rand_num <= 20) || (@type == :tree && rand_num <= 10)
+      true
+    else
+      false
     end
   end
 

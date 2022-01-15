@@ -23,9 +23,24 @@ class Forest
     populate_grid!
   end
 
+  # Handle tree sapling planting on each tick. We can't do this from the Tree class because it doesn't have information about the grid, unfortunately.
   def tick!
-    @grid.each do |row|
-      row.each { |s| s&.tick! }
+    @grid.each_with_index do |row, y|
+      row.each_with_index do |slot, x|
+        if slot.is_a?(Tree)
+          spawn_sapling = slot&.tick!
+          if spawn_sapling
+            adjacent_spaces = get_adjacent_spaces(x, y)
+            empty_adjacent_space = adjacent_spaces.filter { |space| space[:content].nil? }.sample
+
+            unless empty_adjacent_space.nil?
+              populate(empty_adjacent_space[:coords][0], empty_adjacent_space[:coords][1], Tree.new(type: :sapling, age: 0))
+            end
+          end
+        else
+          slot&.tick!
+        end
+      end
     end
   end
 
@@ -44,9 +59,9 @@ class Forest
       populate_an_empty_grid_space(Tree.new(type: :tree, age: 12))
     end
 
-    lumberjack_to_spawn = (Lumberjack::SPAWN_RATE * total_grid_size).round
-    puts "Spawning #{lumberjack_to_spawn} Lumberjacks..."
-    lumberjack_to_spawn.times do
+    lumberjacks_to_spawn = (Lumberjack::SPAWN_RATE * total_grid_size).round
+    puts "Spawning #{lumberjacks_to_spawn} Lumberjacks..."
+    lumberjacks_to_spawn.times do
       populate_an_empty_grid_space(Lumberjack.new)
     end
   end
@@ -58,10 +73,20 @@ class Forest
     loop do
       rand_num = rand(total_grid_size)
       if @grid[rand_num / size][rand_num % size].nil?
-        @grid[rand_num / size][rand_num % size] = populator
+        populate(rand_num / size, rand_num % size, populator)
         break
       end
     end
+  end
+
+  # @param x [Integer]
+  # @param y [Integer]
+  # @param populator [Bear, Tree, Lumberjack, nil] 
+  # @param [void]
+  def populate(x, y, populator)
+    raise StandardError, "This space is already populated!" unless @grid[x][y].nil?
+
+    @grid[x][y] = populator
   end
 
   # @return [String]
