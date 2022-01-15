@@ -31,11 +31,15 @@ class Forest
   # @return [Boolean] Whether to continue to the next tick.
   def tick!
     new_saplings_spawned = 0
+    new_elder_trees_spawned = 0
 
     @grid.each_with_index do |row, y|
       row.each_with_index do |slot, x|
         if slot.is_a?(Tree)
           spawn_sapling = slot&.tick!
+          # When the tree becomes 120 months old, it becomes an elder tree.
+          # So we want to track that to output later.
+          new_elder_trees_spawned += 1 if slot.age == 120
           if spawn_sapling
             adjacent_spaces = get_adjacent_spaces(x, y)
             empty_adjacent_space = adjacent_spaces.filter { |space| space[:content].nil? }.sample
@@ -51,7 +55,10 @@ class Forest
       end
     end
 
-    puts "Month [#{@month.to_s.rjust(4, '0')}]: [#{new_saplings_spawned}] new saplings created."
+    # Monthly outputs.
+    puts "Month [#{@month.to_s.rjust(4, '0')}]: [#{new_saplings_spawned}] new saplings created." unless new_saplings_spawned.zero?
+    puts "Month [#{@month.to_s.rjust(4, '0')}]: [#{new_elder_trees_spawned}] trees became elder trees." unless new_elder_trees_spawned.zero?
+
     if @month % 12 == 0
       flat_grid = @grid.flatten
 

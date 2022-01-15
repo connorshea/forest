@@ -22,9 +22,9 @@ class Tree
     @age += 1
 
     if @type != :elder_tree
-      if @age > 120 && @type == :tree
+      if @age >= 120 && @type == :tree
         @type = :elder_tree
-      elsif @age > 12 && @type == :sapling
+      elsif @age >= 12 && @type == :sapling
         @type = :tree
       end
     end
