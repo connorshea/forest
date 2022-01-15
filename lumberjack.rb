@@ -7,6 +7,10 @@ class Lumberjack
     # TODO
   end
 
+  # TODO: Do something on a tick.
+  # @return [void]
+  def tick!; end
+
   # @return [String] Return a string representing this, for rendering in a grid.
   def representation
     'L'

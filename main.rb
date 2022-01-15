@@ -8,4 +8,9 @@ SIZE = 10
 
 forest = Forest.new(size: SIZE)
 
-puts forest.pretty_inspect
+loop do
+  puts forest.pretty_inspect
+  puts 'Tick!'
+  forest.tick!
+  sleep 1
+end

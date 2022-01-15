@@ -14,16 +14,24 @@ class Forest
   # @attr [Array<Array<Bear, Tree, Lumberjack, nil>] The grid of items, will be all nils by default.
   attr_accessor :grid
 
+  # @param size [Integer] The width and height of the grid.
   def initialize(size:)
     @size = size
     @total_grid_size = size * size
     @grid = Array.new(size) { Array.new(size) }
 
-    populate_grid
+    populate_grid!
   end
 
-  # Populates the grid with stuff.
-  def populate_grid
+  def tick!
+    @grid.each do |row|
+      row.each { |s| s&.tick! }
+    end
+  end
+
+  # Populates the grid with bears and trees and lumberjacks.
+  # @return [void]
+  def populate_grid!
     bears_to_spawn = (Bear::SPAWN_RATE * total_grid_size).round
     puts "Spawning #{bears_to_spawn} Bears..."
     bears_to_spawn.times do
@@ -33,7 +41,7 @@ class Forest
     trees_to_spawn = (Tree::SPAWN_RATE * total_grid_size).round
     puts "Spawning #{trees_to_spawn} Trees..."
     trees_to_spawn.times do
-      populate_an_empty_grid_space(Tree.new(type: :tree))
+      populate_an_empty_grid_space(Tree.new(type: :tree, age: 12))
     end
 
     lumberjack_to_spawn = (Lumberjack::SPAWN_RATE * total_grid_size).round
@@ -49,20 +57,16 @@ class Forest
   def populate_an_empty_grid_space(populator)
     loop do
       rand_num = rand(total_grid_size)
-      # puts populator.class
-      # puts "random num: #{rand_num}"
-      # puts "size: #{size}"
-      # puts "grid[#{rand_num / size}][#{rand_num % size}]"
-      if grid[rand_num / size][rand_num % size].nil?
-        # puts 'nil on the grid!'
-        grid[rand_num / size][rand_num % size] = populator
+      if @grid[rand_num / size][rand_num % size].nil?
+        @grid[rand_num / size][rand_num % size] = populator
         break
       end
     end
   end
 
+  # @return [String]
   def inspect
-    grid.map do |row|
+    @grid.map do |row|
       row.map do |slot|
         slot.nil? ? ' ' : slot.representation
       end
@@ -71,11 +75,49 @@ class Forest
     end
   end
 
+  # @return [String]
   def pretty_inspect
-    grid.map do |row|
+    @grid.map do |row|
       row.map do |slot|
         slot.nil? ? ' ' : slot.representation
       end.join('')
     end.join("\n")
+  end
+
+  # Given an x and y coordinate, get the contents of the adjacent spaces.
+  # TODO: There's definitely a better way to do this.
+  #
+  # @param x [Integer] The x coordinate.
+  # @param y [Integer] The y coordinate.
+  # @return [Array<Hash>] Array of hashes with coordinates and contents.
+  def get_adjacent_spaces(x, y)
+    adjacent_spaces = []
+
+    if x < size - 1 && y < size - 1
+      adjacent_spaces << {
+        coords: [x + 1, y + 1],
+        content: @grid[x + 1][y + 1]
+      }
+    end
+    if x < size - 1 && !y.zero?
+      adjacent_spaces << {
+        coords: [x + 1, y - 1],
+        content: @grid[x + 1][y - 1]
+      }
+    end
+    if !x.zero? && y < size - 1
+      adjacent_spaces << {
+        coords: [x - 1, y + 1],
+        content: @grid[x - 1][y + 1]
+      }
+    end
+    if !x.zero? && !y.zero?
+      adjacent_spaces << {
+        coords: [x - 1, y - 1],
+        content: @grid[x - 1][y - 1]
+      }
+    end
+
+    adjacent_spaces
   end
 end
